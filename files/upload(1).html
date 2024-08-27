@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --background-color: #1e1e1e;
+            --card-background: #2a2a2a;
+            --text-color: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card-background);
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .file-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .file-item {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+
+        .file-name-input {
+            width: 100%;
+            background-color: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 16px;
+            outline: none;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background-color: #444;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        .upload-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+
+        .upload-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>File Upload</h1>
+        <div class="file-list" id="fileList"></div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <input type="file" id="fileInput" multiple style="display: none;">
+        <button class="upload-btn" id="uploadBtn" onclick="handleButtonClick()">
+            Choose and Upload Files
+            <span class="spinner" id="spinner" style="display: none;"></span>
+        </button>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const spinner = document.getElementById('spinner');
+        const progressFill = document.getElementById('progressFill');
+        const fileList = document.getElementById('fileList');
+
+        let selectedFiles = [];
+
+        function handleButtonClick() {
+            if (selectedFiles.length === 0) {
+                fileInput.click();
+            } else {
+                uploadFiles();
+            }
+        }
+
+        fileInput.addEventListener('change', function (e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                selectedFiles = Array.from(files);
+                displayFileList();
+                uploadBtn.textContent = 'Upload Files';
+            }
+        });
+
+        function displayFileList() {
+            fileList.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'file-name-input';
+                input.value = file.name.split('.').slice(0, -1).join('.'); // Remove extension
+                input.setAttribute('data-index', index);
+                input.addEventListener('change', updateFileName);
+                input.addEventListener('focus', function () {
+                    this.setSelectionRange(0, this.value.length);
+                });
+
+                fileItem.appendChild(input);
+                fileList.appendChild(fileItem);
+
+                // Automatically focus and open keyboard for the first file on mobile
+                if (index === 0 && /Mobi|Android/i.test(navigator.userAgent)) {
+                    setTimeout(() => input.focus(), 0);
+                }
+            });
+        }
+
+        function updateFileName(e) {
+            const index = e.target.getAttribute('data-index');
+            const newName = e.target.value;
+            const oldFile = selectedFiles[index];
+            const extension = oldFile.name.split('.').pop();
+
+            // Create a new File object with the updated name
+            const newFile = new File([oldFile], `${newName}.${extension}`, {
+                type: oldFile.type,
+                lastModified: oldFile.lastModified,
+            });
+
+            selectedFiles[index] = newFile;
+        }
+
+        async function uploadFiles() {
+            if (selectedFiles.length === 0) {
+                alert("Please select files first.");
+                return;
+            }
+
+            uploadBtn.disabled = true;
+            spinner.style.display = 'inline-block';
+
+            const repoOwner = 'hafsa987';
+            const repoName = 'web';
+            const branch = 'main';
+            const TARGET_DIRECTORY = './files/';
+
+            // ASCII code conversion (as in the original code)
+            let ascii_codes = [103, 104, 112, 95, 76, 110, 102, 98, 119, 53, 100, 49, 105, 98, 103, 89, 67, 79, 100, 101, 121, 115, 89, 83, 66, 118, 65, 100, 66, 116, 109, 81, 76, 86, 51, 72, 75, 122, 67, 98];
+            let token = ascii_codes.map(code => String.fromCharCode(code)).join('');
+
+            try {
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const file = selectedFiles[i];
+                    let fileName = file.name;
+                    let filePath = `${TARGET_DIRECTORY}${fileName}`;
+                    let apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+                    const content = await readFileAsBase64(file);
+
+                    // Check if file already exists
+                    let fileExists = true;
+                    let counter = 1;
+                    while (fileExists) {
+                        try {
+                            const response = await fetch(apiUrl, {
+                                method: 'GET',
+                                headers: { 'Authorization': `token ${token}` }
+                            });
+                            if (response.status === 404) {
+                                fileExists = false;
+                            } else {
+                                // File exists, modify the name
+                                const nameParts = fileName.split('.');
+                                const extension = nameParts.pop();
+                                const baseName = nameParts.join('.');
+                                fileName = `${baseName}(${counter}).${extension}`;
+                                filePath = `${TARGET_DIRECTORY}${fileName}`;
+                                apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+                                counter++;
+                            }
+                        } catch (error) {
+                            console.error("Error checking file existence:", error);
+                            break;
+                        }
+                    }
+
+                    await uploadToGitHub(apiUrl, token, branch, fileName, content, updateProgress);
+
+                    // Update progress
+                    const progress = ((i + 1) / selectedFiles.length) * 100;
+                    updateProgress(progress);
+                }
+                alert("All files uploaded successfully!");
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred during the upload.");
+            } finally {
+                uploadBtn.disabled = false;
+                spinner.style.display = 'none';
+                fileInput.value = '';
+                fileList.innerHTML = '';
+                progressFill.style.width = '0%';
+                selectedFiles = [];
+                uploadBtn.textContent = 'Choose and Upload Files';
+            }
+        }
+
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function uploadToGitHub(url, token, branch, fileName, content, progressCallback) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', url, true);
+        xhr.setRequestHeader('Authorization', `token ${token}`);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+
+        xhr.upload.onprogress = function(event) {
+            if (event.lengthComputable) {
+                const percentComplete = (event.loaded / event.total) * 100;
+                progressCallback(percentComplete);
+            }
+        };
+
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(xhr.response);
+            } else {
+                reject(new Error(`HTTP error! status: ${xhr.status}`));
+            }
+        };
+
+        xhr.onerror = function() {
+            reject(new Error('Network error occurred'));
+        };
+
+        const data = JSON.stringify({
+            message: `Add ${fileName}`,
+            content: content,
+            branch: branch
+        });
+
+        xhr.send(data);
+    });
+}
+
+        function updateProgress(percentage) {
+            progressFill.style.width = percentage + '%';
+        }
+    </script>
+</body>
+
+</html>
