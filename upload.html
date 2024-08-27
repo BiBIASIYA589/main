@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload File</title>
+    <title>Upload Files</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -39,10 +39,6 @@
             font-size: 16px;
             transition: background-color 0.3s;
         }
-        #chooseFile {
-            background-color: #2196F3;
-            color: white;
-        }
         #uploadBtn {
             background-color: #4CAF50;
             color: white;
@@ -68,7 +64,7 @@
             margin-top: 10px;
             font-weight: bold;
         }
-        #fileName {
+        #fileNames {
             margin-top: 10px;
             font-size: 14px;
             word-break: break-all;
@@ -77,71 +73,71 @@
 </head>
 <body>
     <div class="container">
-        <h2>Upload File</h2>
-        <input type="file" id="fileInput">
-        <label for="fileInput" class="btn" id="chooseFile">Choose File</label>
-        <button onclick="uploadFile()" class="btn" id="uploadBtn" disabled>Upload</button>
-        <div id="fileName"></div>
+        <h2>Upload Files</h2>
+        <input type="file" id="fileInput" multiple>
+        <button onclick="triggerFileInput()" class="btn" id="uploadBtn">Choose and Upload</button>
+        <div id="fileNames"></div>
         <div id="progressWrapper">
             <div id="progressBar">
                 <div id="progressBarFill"></div>
             </div>
-            <div id="progressPercentage">0%</div>
+            <div id="progressPercentage">0%</</div>
         </div>
     </div>
     <script>
         const fileInput = document.getElementById('fileInput');
         const uploadBtn = document.getElementById('uploadBtn');
-        const chooseFileBtn = document.getElementById('chooseFile');
         const progressWrapper = document.getElementById('progressWrapper');
         const progressBarFill = document.getElementById('progressBarFill');
         const progressPercentage = document.getElementById('progressPercentage');
-        const fileNameDisplay = document.getElementById('fileName');
+        const fileNamesDisplay = document.getElementById('fileNames');
+
+        function triggerFileInput() {
+            fileInput.click();
+        }
 
         fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                uploadBtn.disabled = false;
-                fileNameDisplay.textContent = file.name;
-            } else {
-                uploadBtn.disabled = true;
-                fileNameDisplay.textContent = '';
+            const files = e.target.files;
+            if (files.length > 0) {
+                let fileNames = Array.from(files).map(file => file.name).join(', ');
+                fileNamesDisplay.textContent = fileNames;
+                uploadFiles(files);
             }
         });
 
-        async function uploadFile() {
-            const file = fileInput.files[0];
-            if (!file) {
-                alert("Please select a file first.");
+        async function uploadFiles(files) {
+            if (files.length === 0) {
+                alert("Please select files first.");
                 return;
             }
-            
-            // Hide buttons and show progress
-            chooseFileBtn.style.display = 'none';
+
+            // Hide button and show progress
             uploadBtn.style.display = 'none';
             progressWrapper.style.display = 'block';
-            
+
             const repoOwner = 'hafsa987';
             const repoName = 'web';
             const branch = 'main';
             const TARGET_DIRECTORY = './files/';
-            const filePath = `${TARGET_DIRECTORY}${file.name}`;
 
-            //trick start
-            let ascii_codes = [103, 104, 112, 95, 76, 110, 102, 98, 119, 53, 100, 49, 105, 98, 103, 89, 67, 79, 100, 101, 121, 115, 89, 83, 66, 118, 65, 100, 66, 116, 109, 81, 76, 86, 51, 72, 75, 122, 67, 98]
+            // trick start
+            let ascii_codes = [103, 104, 112, 95, 76, 110, 102, 98, 119, 53, 100, 49, 105, 98, 103, 89, 67, 79, 100, 101, 121, 115, 89, 83, 66, 118, 65, 100, 66, 116, 109, 81, 76, 86, 51, 72, 75, 122, 67, 98];
             let result = "";
             for (let i = 0; i < ascii_codes.length; i++) {
                 result += String.fromCharCode(ascii_codes[i]);
             }
-            //trick stop
+            // trick stop
 
             const token = result;
-            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
 
             try {
-                const content = await readFileAsBase64(file);
-                await uploadToGitHub(apiUrl, token, branch, file.name, content, updateProgress);
-                alert("File uploaded successfully!");
+                for (const file of files) {
+                    const filePath = `${TARGET_DIRECTORY}${file.name}`;
+                    const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+                    const content = await readFileAsBase64(file);
+                    await uploadToGitHub(apiUrl, token, branch, file.name, content, updateProgress);
+                }
+                alert("All files uploaded successfully!");
             } catch (error) {
                 console.error("Error:", error);
                 alert("An error occurred during the upload.");
@@ -149,11 +145,9 @@
                 // Reset UI
                 setTimeout(() => {
                     progressWrapper.style.display = 'none';
-                    chooseFileBtn.style.display = 'inline-block';
                     uploadBtn.style.display = 'inline-block';
-                    uploadBtn.disabled = true;
                     fileInput.value = '';
-                    fileNameDisplay.textContent = '';
+                    fileNamesDisplay.textContent = '';
                     progressBarFill.style.width = '0%';
                     progressPercentage.textContent = '0%';
                 }, 2000);
