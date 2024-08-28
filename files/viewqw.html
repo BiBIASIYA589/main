@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documents viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 10px;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        #file-list {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+        .file-item {
+            background-color: #2a2a2a;
+            border-radius: 5px;
+            margin: 10px 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .file-item:hover {
+            background-color: #3a3a3a;
+        }
+        #upload-box {
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            margin: 0 auto 20px;
+            padding: 20px;
+            max-width: 800px;
+            text-align: center;
+        }
+        .file-name {
+            font-weight: bold;
+            word-break: break-word;
+            margin-bottom: 10px;
+        }
+        .download-btn, #upload-more-btn {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 0;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .download-btn:hover, #upload-more-btn:hover {
+            background-color: #45a049;
+        }
+        @media (min-width: 600px) {
+            body {
+                padding: 20px;
+            }
+            .file-item {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .file-name {
+                margin-bottom: 0;
+                margin-right: 10px;
+                flex: 1;
+            }
+            .download-btn {
+                width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Download or Upload your Academic resources</h1>
+    <div id="upload-box">
+        <h2>Upload Academic resources and more ..</h2>
+        <button id="upload-more-btn">Upload files and more...</button>
+    </div>
+    <div id="file-list"></div>
+
+    <script>
+        const githubUsername = 'pdaunofficial';
+        const repoName = 'PDA-College-Academic-Resources';
+        const fileDirectory = 'files';
+
+        async function fetchFileList() {
+            const apiUrl = `https://api.github.com/repos/${githubUsername}/${repoName}/contents/${fileDirectory}`;
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                if (!Array.isArray(data)) {
+                    throw new Error('Received data is not an array');
+                }
+                return data;
+            } catch (error) {
+                console.error('Error fetching file list:', error);
+                return [];
+            }
+        }
+
+        async function renderFileList() {
+            const fileList = await fetchFileList();
+            const fileListElement = document.getElementById('file-list');
+
+            fileListElement.innerHTML = '';
+
+            if (fileList.length === 0) {
+                fileListElement.innerHTML = '<p>No files found or there was an error fetching the files.</p>';
+                return;
+            }
+
+            for (const file of fileList) {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+
+                const fileName = document.createElement('span');
+                fileName.className = 'file-name';
+                fileName.textContent = file.name;
+
+                const downloadBtn = document.createElement('a');
+                downloadBtn.className = 'download-btn';
+                downloadBtn.href = file.download_url;
+                downloadBtn.textContent = 'Download';
+                downloadBtn.setAttribute('download', '');
+
+                fileItem.appendChild(fileName);
+                fileItem.appendChild(downloadBtn);
+
+                fileItem.addEventListener('click', (e) => {
+                    if (e.target !== downloadBtn) {
+                        window.open(`https://github.com/${githubUsername}/${repoName}/blob/main/${fileDirectory}/${file.name}`, '_blank');
+                    }
+                });
+
+                fileListElement.appendChild(fileItem);
+            }
+        }
+
+        document.getElementById('upload-more-btn').addEventListener('click', () => {
+            window.location.href = 'https://hafsa987.github.io/web/upload.html';
+        });
+
+        renderFileList();
+    </script>
+</body>
+</html>
